@@ -1,0 +1,87 @@
+{
+  "video": {
+    "base_url": "http://127.0.0.1:8000",
+    "width": 1920,
+    "height": 1080,
+    "voice": "zh-CN-XiaoxiaoNeural",
+    "voice_rate": "+4%",
+    "output_name": "comp-insight-demo"
+  },
+  "question": "请基于当前薪酬数据，识别结构性异常最突出的 BU 和关键人群，说明核心风险、原因假设以及管理层下一步应优先采取的动作。",
+  "follow_up": "继续解释为什么风险最高的 BU 最值得优先处理，并给出三条可以立即执行的管理动作。",
+  "scenes": [
+    {
+      "id": "opening",
+      "title": "开场定位",
+      "target_duration_s": 14,
+      "narration": "这是一个面向真实薪酬宽表的 AI 分析系统。它不是停留在图表层面的展示，而是把复杂薪酬数据直接转成管理层能消费的判断与建议。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.5, "text": "面向真实薪酬宽表的 AI 分析系统" },
+        { "offset_s": 3.6, "duration_s": 3.2, "text": "从数据读取直接走向管理判断" },
+        { "offset_s": 6.9, "duration_s": 3.5, "text": "不是只看报表 而是生成行动建议" }
+      ]
+    },
+    {
+      "id": "data_source",
+      "title": "数据接入可信",
+      "target_duration_s": 18,
+      "narration": "系统启动后会直接识别当前活动数据源。首次导入会落到 SQLite，本次演示已经接入接近两百万行的 demo 数据，后续打开即可直接分析。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.3, "text": "启动后自动识别当前活动数据源" },
+        { "offset_s": 3.5, "duration_s": 3.5, "text": "首次导入落到 SQLite" },
+        { "offset_s": 7.2, "duration_s": 3.8, "text": "本次演示已接入近 200 万行数据" },
+        { "offset_s": 11.3, "duration_s": 3.6, "text": "后续打开即可直接分析" }
+      ]
+    },
+    {
+      "id": "question_entry",
+      "title": "高价值问题",
+      "target_duration_s": 24,
+      "narration": "这里不问简单的报表问题，而是直接以老板视角发起任务。我们希望系统识别异常最集中的业务单元、找出背后的结构性原因，并给出优先级明确的管理动作。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.6, "text": "问题不是看数字 而是做判断" },
+        { "offset_s": 3.8, "duration_s": 3.8, "text": "直接从老板视角发起分析任务" },
+        { "offset_s": 7.9, "duration_s": 3.6, "text": "识别异常最集中的 BU 与人群" },
+        { "offset_s": 11.8, "duration_s": 3.9, "text": "同时要求原因假设与优先动作" }
+      ]
+    },
+    {
+      "id": "analysis_depth",
+      "title": "AI 分析深度",
+      "target_duration_s": 66,
+      "narration": "接下来系统会走流式分析过程，先展示思考步骤，再沉淀成完整报告。你能看到副标题、执行摘要、关键指标、跨维度共性问题和完整正文，重点不是罗列图表，而是把复杂现象压缩成可执行的管理建议。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.8, "text": "先展示流式分析过程" },
+        { "offset_s": 4.0, "duration_s": 3.8, "text": "再沉淀为完整管理报告" },
+        { "offset_s": 8.1, "duration_s": 3.9, "text": "副标题会先收敛核心矛盾" },
+        { "offset_s": 12.3, "duration_s": 3.8, "text": "执行摘要聚焦关键风险与动作" },
+        { "offset_s": 16.4, "duration_s": 3.8, "text": "关键指标帮助判断规模还是结构问题" },
+        { "offset_s": 20.5, "duration_s": 4.0, "text": "跨维度共性问题支持快速定优先级" },
+        { "offset_s": 24.9, "duration_s": 3.8, "text": "完整正文保留可追溯的论证链路" }
+      ]
+    },
+    {
+      "id": "follow_up",
+      "title": "追问能力",
+      "target_duration_s": 40,
+      "narration": "报告出来之后，还可以直接继续追问。这里不是重新从零做一轮分析，而是基于当前结论进一步解释风险最高的业务单元，并把建议收敛成可以立刻执行的动作。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.8, "text": "报告出来后可以继续追问" },
+        { "offset_s": 4.0, "duration_s": 4.0, "text": "不是从零重跑 而是沿当前结论继续推演" },
+        { "offset_s": 8.4, "duration_s": 4.0, "text": "聚焦风险最高 BU 的解释与动作" },
+        { "offset_s": 12.8, "duration_s": 3.8, "text": "把建议收敛成可执行方案" }
+      ]
+    },
+    {
+      "id": "reuse",
+      "title": "复用收尾",
+      "target_duration_s": 22,
+      "narration": "最后把报告直接保存下来，进入历史记录就能复看、复用和继续补充。这意味着大规模薪酬数据不再停留在一次性分析，而是可以沉淀成持续复用的管理资产。",
+      "subtitle_cues": [
+        { "offset_s": 0.0, "duration_s": 3.8, "text": "报告可以直接保存与回看" },
+        { "offset_s": 4.0, "duration_s": 3.8, "text": "历史记录支持复用与继续补充" },
+        { "offset_s": 8.2, "duration_s": 4.0, "text": "把一次性分析沉淀为管理资产" }
+      ]
+    }
+  ]
+}
