@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 6%;
+  --foreground: 210 40% 92%;
+  --card: 222 47% 6%;
+  --card-foreground: 210 40% 92%;
+  --popover: 222 47% 6%;
+  --popover-foreground: 210 40% 92%;
+  --primary: 199 89% 58%;
+  --primary-foreground: 222 47% 6%;
+  --secondary: 217 33% 14%;
+  --secondary-foreground: 199 89% 58%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 217 33% 14%;
+  --accent-foreground: 199 89% 58%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 92%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 199 89% 58%;
+  --chart-1: 199 89% 58%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 48 96% 53%;
+  --chart-4: 234 89% 74%;
+  --chart-5: 0 84% 60%;
+  --radius: 1rem;
+
+  --neon-cyan: #38bdf8;
+  --neon-indigo: #818cf8;
+  --glow: 0 0 20px rgba(56, 189, 248, 0.15);
+  --glow-strong: 0 0 30px rgba(56, 189, 248, 0.25);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: linear-gradient(135deg, #0a0e1a 0%, #0f1629 50%, #0a0e1a 100%);
+    background-attachment: fixed;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.04), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(129, 140, 248, 0.04), transparent 40%),
+      linear-gradient(135deg, #0a0e1a 0%, #0f1629 50%, #0a0e1a 100%);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-3xl border bg-[rgba(15,23,42,0.6)] shadow-panel backdrop-blur-xl;
+    border-color: rgba(56, 189, 248, 0.15);
+  }
+
+  .neon-border {
+    border: 1px solid rgba(56, 189, 248, 0.15);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+  }
+
+  .card-dark {
+    @apply rounded-3xl backdrop-blur-xl;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+  }
+}

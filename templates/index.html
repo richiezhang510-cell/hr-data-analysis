@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title or "Comp Insight Studio" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='app.css') if url_for else '/static/app.css' }}"
+    />
+  </head>
+  <body>
+    {% set app_state = initial_state or {} %}
+    {% set filters = app_state.get('filters', {}) %}
+    {% set executive_summary = app_state.get('executive_summary', {}) %}
+    {% set overview_cards = app_state.get('overview_cards', []) %}
+    {% set overview_charts = app_state.get('overview_charts', []) %}
+    {% set dimensions = app_state.get('dimension_reports', []) %}
+    {% set consolidated = app_state.get('consolidated_summary', {}) %}
+    {% set full_report = app_state.get('full_report', {}) %}
+    {% set loading = app_state.get('loading', False) %}
+
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero__backdrop hero__backdrop--one"></div>
+        <div class="hero__backdrop hero__backdrop--two"></div>
+        <div class="hero__content">
+          <div class="hero__meta">
+            <span class="hero__eyebrow">Comp Insight Studio</span>
+            <span class="hero__badge">Consulting-style payroll analytics</span>
+          </div>
+          <div class="hero__grid">
+            <div class="hero__copy">
+              <h1>智能薪酬分析报告</h1>
+              <p class="hero__lead">
+                以 BU 为主轴，联动多个次维度拆解薪酬科目表现，并由 LLM 汇总为适合汇报的深度洞察报告。
+              </p>
+              <div class="hero__chips">
+                <span>多次维度联动</span>
+                <span>SQL 受控生成</span>
+                <span>咨询式报告成稿</span>
+              </div>
+            </div>
+
+            <aside class="hero__panel">
+              <div class="hero-panel__header">
+                <span class="hero-panel__label">本次分析</span>
+                <strong>{{ filters.get('subject', '请选择薪酬科目') }}</strong>
+              </div>
+              <dl class="hero-panel__stats">
+                <div>
+                  <dt>主维度</dt>
+                  <dd>{{ filters.get('primary_dimension', 'BU') }}</dd>
+                </div>
+                <div>
+                  <dt>次维度</dt>
+                  <dd>{{ filters.get('secondary_dimensions', [])|length }}</dd>
+                </div>
+                <div>
+                  <dt>时间范围</dt>
+                  <dd>{{ filters.get('time_range_label', '2025-01 至 2027-01') }}</dd>
+                </div>
+              </dl>
+              <p class="hero-panel__note">
+                页面兼容服务器直接注入 JSON，也支持在无数据时展示默认占位状态。
+              </p>
+            </aside>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section class="control-card">
+          <div class="section-heading">
+            <div>
+              <p class="section-heading__eyebrow">Analysis Builder</p>
+              <h2>筛选与生成</h2>
+            </div>
+            <button class="ghost-button" type="button" data-action="sample-report">
+              填充示例报告
+            </button>
+          </div>
+
+          <form class="filters-grid" method="post" action="{{ form_action or '/analyze' }}">
+            <label class="field">
+              <span>薪酬科目</span>
+              <select name="subject">
+                {% set subject_options = subject_options or ['底薪', '基本工资调整', '内勤绩效', '岗位津贴', '倒班津贴', '特招津贴', '加班费', '经济补偿金', '签约金', '降温取暖费', '配偶补贴', '借调补贴'] %}
+                {% for subject in subject_options %}
+                <option value="{{ subject }}" {% if filters.get('subject') == subject %}selected{% endif %}>
+                  {{ subject }}
+                </option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label class="field">
+              <span>主维度</span>
+              <select name="primary_dimension">
+                {% set primary_dimension = filters.get('primary_dimension', 'BU') %}
+                <option value="BU" selected>BU</option>
+              </select>
+            </label>
+
+            <label class="field field--wide">
+              <span>次维度多选</span>
+              <div class="multi-select" data-multi-select>
+                {% set dim_options = secondary_dimension_options or ['职能', '级别', '绩效分位', '司龄分箱', '年龄分箱', '统计月份'] %}
+                {% for dimension in dim_options %}
+                {% set selected_dimensions = filters.get('secondary_dimensions', []) %}
+                <label class="check-chip">
+                  <input
+                    type="checkbox"
+                    name="secondary_dimensions"
+                    value="{{ dimension }}"
+                    {% if dimension in selected_dimensions %}checked{% endif %}
+                  />
+                  <span>{{ dimension }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </label>
+
+            <label class="field">
+              <span>开始月份</span>
+              <input type="month" name="start_month" value="{{ filters.get('start_month', '2025-01') }}" />
+            </label>
+
+            <label class="field">
+              <span>结束月份</span>
+              <input type="month" name="end_month" value="{{ filters.get('end_month', '2027-01') }}" />
+            </label>
+
+            <label class="field field--wide">
+              <span>指标口径</span>
+              <div class="metric-pills">
+                {% set metric_options = metric_options or ['总额', '平均金额', '领取人数', '发放覆盖率', '占比', '环比', '同比'] %}
+                {% set selected_metrics = filters.get('metrics', ['总额', '平均金额', '发放覆盖率']) %}
+                {% for metric in metric_options %}
+                <label class="metric-pill">
+                  <input
+                    type="checkbox"
+                    name="metrics"
+                    value="{{ metric }}"
+                    {% if metric in selected_metrics %}checked{% endif %}
+                  />
+                  <span>{{ metric }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </label>
+
+            <label class="field field--wide">
+              <span>分析问题</span>
+              <textarea
+                name="prompt"
+                rows="4"
+                placeholder="例如：分析 2026 年经济补偿金，按 BU 主维度，同时看职能、级别和绩效分位，重点解释异常高 BU 的潜在原因并给出管理建议。"
+              >{{ filters.get('prompt', '') }}</textarea>
+            </label>
+
+            <div class="filters-footer">
+              <div class="selected-badges">
+                {% for dimension in filters.get('secondary_dimensions', []) %}
+                <span class="badge badge--solid">{{ dimension }}</span>
+                {% endfor %}
+              </div>
+              <div class="filters-actions">
+                <button class="ghost-button" type="reset">清空</button>
+                <button class="primary-button" type="submit">生成正式报告</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="report-card">
+          <div class="section-heading">
+            <div>
+              <p class="section-heading__eyebrow">Boardroom Output</p>
+              <h2>正式报告预览</h2>
+            </div>
+            <div class="report-actions">
+              <button class="ghost-button" type="button" data-action="print-report">导出 PDF</button>
+              <button class="ghost-button" type="button" data-action="copy-report">复制全文</button>
+            </div>
+          </div>
+
+          <div class="report-meta">
+            <div>
+              <span>主题</span>
+              <strong>{{ filters.get('subject', '未选择') }}</strong>
+            </div>
+            <div>
+              <span>范围</span>
+              <strong>{{ filters.get('time_range_label', '2025-01 至 2027-01') }}</strong>
+            </div>
+            <div>
+              <span>主维度</span>
+              <strong>{{ filters.get('primary_dimension', 'BU') }}</strong>
+            </div>
+            <div>
+              <span>报告模式</span>
+              <strong>咨询式深度分析</strong>
+            </div>
+          </div>
+
+          <div
+            class="loading-banner {% if not loading %}is-hidden{% endif %}"
+            data-loading-banner
+            aria-live="polite"
+          >
+            <div class="loading-banner__pulse"></div>
+            <div>
+              <strong>正在生成报告</strong>
+              <p>系统正在逐个维度拆解、汇总 LLM 洞察，并组织为正式汇报材料。</p>
+            </div>
+          </div>
+
+          <section class="summary-block">
+            <div class="summary-block__content">
+              <p class="section-heading__eyebrow">Executive Summary</p>
+              <h3>{{ executive_summary.get('title', '等待生成管理摘要') }}</h3>
+              <p>
+                {{ executive_summary.get('narrative', '生成后，这里会先给出结论、再概括主要驱动因素，最后指出优先行动建议。') }}
+              </p>
+            </div>
+            <aside class="summary-block__callout">
+              <span>优先提示</span>
+              <strong>{{ executive_summary.get('priority_callout', '先选择科目与至少一个次维度，再生成报告。') }}</strong>
+            </aside>
+          </section>
+
+          <section class="overview-grid" data-overview-grid>
+            {% if overview_cards %}
+              {% for card in overview_cards %}
+              <article class="metric-card">
+                <div class="metric-card__meta">
+                  <span>{{ card.get('label', '指标') }}</span>
+                  <small>{{ card.get('context', '') }}</small>
+                </div>
+                <strong>{{ card.get('value', '--') }}</strong>
+                {% if card.get('trend_icon') %}
+                <div class="metric-card__trend metric-card__trend--{{ card.get('trend_direction', 'flat') }}">
+                  <span class="metric-card__trend-icon">{{ card.get('trend_icon') }}</span>
+                  <span>{{ card.get('context', '') }}</span>
+                </div>
+                {% endif %}
+                <p>{{ card.get('insight', '等待分析结果。') }}</p>
+              </article>
+              {% endfor %}
+            {% else %}
+              <article class="metric-card is-placeholder">
+                <div class="metric-card__meta"><span>总额</span><small>全样本</small></div>
+                <strong>¥ --</strong>
+                <p>报告生成后显示薪酬科目的总体规模与同比/环比判断。</p>
+              </article>
+              <article class="metric-card is-placeholder">
+                <div class="metric-card__meta"><span>覆盖率</span><small>领取员工</small></div>
+                <strong>--%</strong>
+                <p>展示领取覆盖率及最值得关注的 BU 或人群分层。</p>
+              </article>
+              <article class="metric-card is-placeholder">
+                <div class="metric-card__meta"><span>异常信号</span><small>自动诊断</small></div>
+                <strong>--</strong>
+                <p>聚焦异常波动、极值和结构失衡，形成报告中的重点提醒。</p>
+              </article>
+            {% endif %}
+          </section>
+
+          <section class="overview-chart-grid">
+            {% if overview_charts %}
+              {% for chart in overview_charts %}
+              <article class="chart-card chart-card--feature">
+                <div class="chart-card__header">
+                  <strong>{{ chart.get('chart_title', '总览图表') }}</strong>
+                  <span>{{ chart.get('chart_insight', '用于说明核心图表结论。') }}</span>
+                </div>
+                <div
+                  class="chart-surface chart-surface--lg"
+                  data-echart="overview"
+                  data-chart-type="{{ chart.get('chart_type', 'bar') }}"
+                  data-chart-payload='{{ chart.get("chart_payload", {})|tojson }}'
+                ></div>
+              </article>
+              {% endfor %}
+            {% else %}
+              <article class="chart-card chart-card--feature">
+                <div class="chart-card__header">
+                  <strong>BU 总额排名</strong>
+                  <span>生成后将展示头部 BU 的规模与占比结构。</span>
+                </div>
+                <div class="chart-placeholder chart-placeholder--tall">
+                  <span>Overview Chart</span>
+                  <small>等待生成多图表总览区</small>
+                </div>
+              </article>
+            {% endif %}
+          </section>
+
+          <section class="dimension-stack" data-dimension-stack>
+            {% if dimensions %}
+              <nav class="dimension-tabs" aria-label="维度切换">
+                {% for dimension in dimensions %}
+                <button
+                  class="dimension-tab {% if loop.first %}is-active{% endif %}"
+                  type="button"
+                  data-dimension-tab
+                  data-target="dimension-panel-{{ loop.index }}"
+                >
+                  {{ dimension.get('dimension_name', '次维度') }}
+                </button>
+                {% endfor %}
+              </nav>
+
+              {% for dimension in dimensions %}
+              <article
+                class="dimension-card {% if not loop.first %}is-hidden{% endif %}"
+                id="dimension-panel-{{ loop.index }}"
+                data-dimension-panel
+              >
+                <div class="dimension-card__header">
+                  <div>
+                    <p class="section-heading__eyebrow">Dimension Analysis</p>
+                    <h3>{{ dimension.get('title', dimension.get('dimension_name', '维度分析')) }}</h3>
+                  </div>
+                  <span class="badge">{{ dimension.get('dimension_name', '次维度') }}</span>
+                </div>
+
+                <p class="dimension-card__headline">
+                  {{ dimension.get('headline', '生成后，这里会以一句话先说清当前次维度的核心结论。') }}
+                </p>
+
+                <div class="dimension-grid">
+                  <div class="chart-card">
+                    <div class="chart-card__header">
+                      <strong>{{ dimension.get('chart_data', {}).get('primary_chart', {}).get('chart_title', 'BU x 当前维度结构图') }}</strong>
+                      <span>{{ dimension.get('chart_data', {}).get('primary_chart', {}).get('chart_insight', '用于展示分布、排名或热力结构。') }}</span>
+                    </div>
+                    <div
+                      class="chart-surface"
+                      data-echart="dimension-primary"
+                      data-chart-type="{{ dimension.get('chart_data', {}).get('primary_chart', {}).get('chart_type', 'grouped-bar') }}"
+                      data-chart-payload='{{ dimension.get("chart_data", {}).get("primary_chart", {}).get("chart_payload", {})|tojson }}'
+                    ></div>
+                  </div>
+
+                  <div class="chart-card">
+                    <div class="chart-card__header">
+                      <strong>{{ dimension.get('chart_data', {}).get('secondary_chart', {}).get('chart_title', '趋势图') }}</strong>
+                      <span>{{ dimension.get('chart_data', {}).get('secondary_chart', {}).get('chart_insight', '用于展示时间维度上的波动与走势。') }}</span>
+                    </div>
+                    <div
+                      class="chart-surface"
+                      data-echart="dimension-secondary"
+                      data-chart-type="{{ dimension.get('chart_data', {}).get('secondary_chart', {}).get('chart_type', 'line') }}"
+                      data-chart-payload='{{ dimension.get("chart_data", {}).get("secondary_chart", {}).get("chart_payload", {})|tojson }}'
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="dimension-grid dimension-grid--supporting">
+                  {% for chart in dimension.get('chart_data', {}).get('supporting_charts', []) %}
+                  <div class="chart-card">
+                    <div class="chart-card__header">
+                      <strong>{{ chart.get('chart_title', '辅助图表') }}</strong>
+                      <span>{{ chart.get('chart_insight', '图表说明') }}</span>
+                    </div>
+                    <div
+                      class="chart-surface chart-surface--sm"
+                      data-echart="dimension-supporting"
+                      data-chart-type="{{ chart.get('chart_type', 'heatmap') }}"
+                      data-chart-payload='{{ chart.get("chart_payload", {})|tojson }}'
+                    ></div>
+                  </div>
+                  {% endfor %}
+
+                  <div class="finding-card">
+                    <h4>关键发现</h4>
+                    <ul>
+                      {% for finding in dimension.get('key_findings', []) %}
+                      <li>{{ finding }}</li>
+                      {% else %}
+                      <li>等待该维度的关键发现输出。</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="insight-grid">
+                  <section class="insight-panel">
+                    <h4>异常点</h4>
+                    <ul>
+                      {% for item in dimension.get('anomalies', []) %}
+                      <li>{{ item }}</li>
+                      {% else %}
+                      <li>暂无异常说明，占位展示。</li>
+                      {% endfor %}
+                    </ul>
+                  </section>
+                  <section class="insight-panel">
+                    <h4>可能驱动因素</h4>
+                    <ul>
+                      {% for item in dimension.get('possible_drivers', []) %}
+                      <li>{{ item }}</li>
+                      {% else %}
+                      <li>后续由 LLM 结合 SQL 结果和趋势信号生成解释。</li>
+                      {% endfor %}
+                    </ul>
+                  </section>
+                  <section class="insight-panel">
+                    <h4>管理含义</h4>
+                    <ul>
+                      {% for item in dimension.get('management_implications', []) %}
+                      <li>{{ item }}</li>
+                      {% else %}
+                      <li>这里会形成适合管理汇报的启示与动作建议。</li>
+                      {% endfor %}
+                    </ul>
+                  </section>
+                </div>
+              </article>
+              {% endfor %}
+            {% else %}
+              {% for fallback_dimension in ['职能', '级别', '绩效分位'] %}
+              <article class="dimension-card is-placeholder">
+                <div class="dimension-card__header">
+                  <div>
+                    <p class="section-heading__eyebrow">Dimension Analysis</p>
+                    <h3>{{ fallback_dimension }}拆解示例</h3>
+                  </div>
+                  <span class="badge">{{ fallback_dimension }}</span>
+                </div>
+                <p class="dimension-card__headline">
+                  这里会呈现 “BU x {{ fallback_dimension }}” 的一句话结论、关键发现、异常解释和管理启示。
+                </p>
+                <div class="dimension-grid">
+                  <div class="chart-card">
+                    <div class="chart-card__header">
+                      <strong>BU x {{ fallback_dimension }} 结构图</strong>
+                      <span>适合横向条形图、热力图或堆叠图</span>
+                    </div>
+                    <div class="chart-placeholder">
+                      <span>Chart Surface</span>
+                      <small>等待后端注入图表数据</small>
+                    </div>
+                  </div>
+                  <div class="finding-card">
+                    <h4>关键发现</h4>
+                    <ul>
+                      <li>自动识别高低组与 BU 分层差异。</li>
+                      <li>解释哪些群体推动了薪酬科目差异。</li>
+                      <li>将局部现象与整体结论明确区分。</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="insight-grid">
+                  <section class="insight-panel"><h4>异常点</h4><ul><li>展示极值、波峰波谷和结构失衡。</li></ul></section>
+                  <section class="insight-panel"><h4>可能驱动因素</h4><ul><li>结合数据口径和组织结构形成解释。</li></ul></section>
+                  <section class="insight-panel"><h4>管理含义</h4><ul><li>给出适合 HRBP/薪酬经理的后续动作。</li></ul></section>
+                </div>
+              </article>
+              {% endfor %}
+            {% endif %}
+          </section>
+
+          <section class="consolidated-card">
+            <div class="consolidated-card__header">
+              <div>
+                <p class="section-heading__eyebrow">Consolidated Summary</p>
+                <h3>{{ consolidated.get('title', '跨维度综合判断') }}</h3>
+              </div>
+              <span class="badge badge--solid">Final Synthesis</span>
+            </div>
+
+            <div class="consolidated-grid">
+              <div class="consolidated-hero">
+                <p>
+                  {{ consolidated.get('summary', '这里将由 LLM 汇总多个次维度的独立洞察，识别重复信号、结构性问题和优先处理事项。') }}
+                </p>
+                <div class="mini-kpis">
+                  {% for pill in consolidated.get('signal_pills', ['跨维度重复信号', '结构性问题判断', '优先级建议']) %}
+                  <span>{{ pill }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="consolidated-chart">
+                {% for chart in consolidated.get('chart_data', []) %}
+                <div class="chart-card consolidated-chart-card">
+                  <div class="chart-card__header">
+                    <strong>{{ chart.get('chart_title', '综合图表') }}</strong>
+                    <span>{{ chart.get('chart_insight', '适合展示各维度解释力度或异常贡献排序。') }}</span>
+                  </div>
+                  <div
+                    class="chart-surface chart-surface--lg"
+                    data-echart="consolidated"
+                    data-chart-type="{{ chart.get('chart_type', 'radar') }}"
+                    data-chart-payload='{{ chart.get("chart_payload", {})|tojson }}'
+                  ></div>
+                </div>
+                {% else %}
+                <div class="chart-placeholder chart-placeholder--tall">
+                  <span>Executive Comparison Chart</span>
+                  <small>支持后端注入排序图、雷达图或矩阵图</small>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+
+          <section class="full-report-card" id="full-report">
+            <div class="full-report-header">
+              <h3>{{ full_report.get('title', '完整分析报告') }}</h3>
+              <div class="report-actions">
+                <button class="ghost-button" type="button" data-action="copy-report">复制全文</button>
+                <button class="ghost-button" type="button" data-action="print-report">打印版</button>
+              </div>
+            </div>
+
+            <article class="full-report-article" data-full-report-body>
+              {% for paragraph in full_report.get('body_paragraphs', []) %}
+              <p>{{ paragraph }}</p>
+              {% else %}
+              <p>生成后，这里会直接输出完整正文，不再拆成目录、提示卡或附录区块。</p>
+              {% endfor %}
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script id="initial-state" type="application/json">
+      {{ app_state|tojson if app_state else '{}' }}
+    </script>
+    <script
+      src="{{ url_for('static', path='app.js') if url_for else '/static/app.js' }}"
+      defer
+    ></script>
+  </body>
+</html>
